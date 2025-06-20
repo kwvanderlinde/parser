@@ -21,6 +21,7 @@ import net.rptools.parser.ast.AST;
 import net.rptools.parser.ast.BinaryOperator;
 import net.rptools.parser.ast.UnaryOperator;
 import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 
 public class AstBuilderVisitor extends ExpressionParserBaseVisitor<AST> {
   @Override
@@ -96,9 +97,13 @@ public class AstBuilderVisitor extends ExpressionParserBaseVisitor<AST> {
 
   @Override
   public AST.Assignment visitAssignment(ExpressionParser.AssignmentContext ctx) {
-    var lhs = new AST.Variable(ctx.id.getText(), ctx.id.getText());
-    var rhs = visit(ctx.rhs);
-    return new AST.Assignment(ctx.operator.getText(), lhs, rhs);
+      var lhs = visit(ctx.id);
+      if (lhs instanceof AST.Variable var) {
+          var rhs = visit(ctx.rhs);
+          return new AST.Assignment(ctx.operator.getText(), var, rhs);
+      }
+
+      throw new ParseCancellationException(String.format("Left hand side of assignment must be an identifier, but found %s", lhs.getClass().getSimpleName()));
   }
 
   @Override

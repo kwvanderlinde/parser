@@ -39,5 +39,5 @@ expr:
     | lhs=expr operator=(GE|GT|LT|LE|EQUALS|NOTEQUALS) rhs=expr # compare
     | lhs=expr operator=AND rhs=expr # and
     | lhs=expr operator=OR rhs=expr # or
-    | id=IDENTIFIER operator=ASSIGN rhs=expr # assignment
+    | id=expr operator=ASSIGN rhs=expr # assignment
     ;
