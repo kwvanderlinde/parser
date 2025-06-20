@@ -96,3 +96,6 @@ Multiline;`10 +
 Unicode: multibyte BMP (U+2019);"pre ’ post"; "pre ’ post"
 Unicode: SMP (U+1F512);"pre 🔒 post"; "pre 🔒 post"
 Unicode: CJK (U+30013);"pre 𰀓 post"; "pre 𰀓 post"
+Trailing input: paren; func("", 0)); ( func "" 0 )
+Trailing input: comma; "x"+"y",; ( + "x" "y" )
+Calling a string;"a"(5); "a"

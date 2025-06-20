@@ -1,2 +1,4 @@
 Name;Input
 Assignment to string;"a" = 5
+Trailing subtraction;("a" * 2-)
+Unclosed paren;("a" * 2-
