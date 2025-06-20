@@ -53,6 +53,7 @@ Hex integer;0xFF; 0xFF
 Standard function: hex() single byte;hex(0xFF); ( hex 0xFF )
 Standard function: hex() single byte as two;hex(0x00FF); ( hex 0x00FF )
 Standard function: hex() two byte;hex(0xfac1); ( hex 0xfac1 )
+No parameters function;test(); test
 Boolean: true;true; true
 Boolean: false;false; false
 Not: non-zero;!10; ( ! 10 )
@@ -86,9 +87,25 @@ String equals mixed case: no;'Foo ' == ' fOo '; ( == 'Foo ' ' fOo ' )
 Standard function: eqs() mixed case strings;eqs('Foo ', ' fOo '); ( eqs 'Foo ' ' fOo ' )
 Standard function: eqs() same string;eqs('foo', 'foo'); ( eqs 'foo' 'foo' )
 Adjacent strings;"foo" "bar"; "foo"
+Adjacent strings (no whitespace);"foo""bar"; "foo"
+Adjacent strings (no whitespace, first is empty);"""bar"; ""
+Adjacent strings (no whitespace, second is empty);"foo"""; "foo"
 Multiline;`10 +
 17 +
 3`; ( + ( + 10 17 ) 3 )
 Unicode: multibyte BMP (U+2019);"pre ’ post"; "pre ? post"
 Unicode: SMP (U+1F512);"pre 🔒 post"; "pre ? post"
 Unicode: CJK (U+30013);"pre 𰀓 post"; "pre ? post"
+Trailing input: assignment;a=5,); ( = a 5 )
+Trailing input: or;a || 5,); ( || a 5 )
+Trailing input: and;a && 5,); ( && a 5 )
+Trailing input: compare;a < 5,); ( < a 5 )
+Trailing input: not;!a,); ( ! a )
+Trailing input: add;a + 5,); ( + a 5 )
+Trailing input: mul;a * 5,); ( * a 5 )
+Trailing input: pow;a ^ 5,); ( ^ a 5 )
+Trailing input: unary;-a,); ( - a )
+Trailing input: paren expr;(a + 5),); ( + a 5 )
+Trailing input: function; func("", 0),); ( func "" 0 )
+Trailing input: string add; "x"+"y",; ( + "x" "y" )
+Calling a string;"a"(5); "a"

@@ -54,4 +54,17 @@ public class ParserTest {
     var structure = xp.getTree().toStringTree();
     assertEquals(expectedStructure, structure, "The parsed AST must match the expected structure");
   }
+
+  @ParameterizedTest(name = "{0}; {1}")
+  @CsvFileSource(
+      resources = "ParserTest.testFailedParses.csv",
+      numLinesToSkip = 1,
+      delimiter = ';',
+      quoteCharacter = '`',
+      ignoreLeadingAndTrailingWhitespace = false)
+  public void testFailedParses(String label, String input) throws ParserException {
+    Parser p = new Parser();
+    Expression xp = p.parseExpression(input);
+    assertNull(xp.getTree(), "The parsed AST must match the expected structure");
+  }
 }

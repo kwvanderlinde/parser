@@ -1,0 +1,11 @@
+Name;Input
+Assignment to string;"a" = 5
+Assignment to number;5 = "a"
+Assignment to hex number;0xff = "a"
+Trailing input: number;5,); 5
+Trailing input: hex;0xff,); 0xff
+Trailing input: var;a,); a
+Trailing input: single quote string;'a',); 'a'
+Trailing input: double quote string;"a",); "a"
+Trailing subtraction;("a" * 2-)
+Unclosed paren;("a" * 2-
