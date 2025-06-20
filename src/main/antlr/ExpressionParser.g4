@@ -22,7 +22,7 @@ options {
     tokenVocab=ExpressionLexer;
 }
 
-full: result=expr (expr)* EOF;
+full: result=expr (expr)*;
 
 expr:
       id=IDENTIFIER LPAREN (expr (COMMA expr)*)? RPAREN # function
