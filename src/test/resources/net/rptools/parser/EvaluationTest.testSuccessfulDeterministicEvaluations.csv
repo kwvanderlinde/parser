@@ -88,9 +88,9 @@ Unicode: multibyte BMP (U+2019);"pre ’ post";pre ? post
 Unicode: SMP (U+1F512);"pre 🔒 post";pre ? post
 Unicode: CJK (U+30013);"pre 𰀓 post";pre ? post
 String literal quotes are stripped;nondeterministicIdentity("hi");hi
-String literal quotes are stripped;nondeterministicIdentity(quotedValue);"value"
+String literal quotes are stripped;nondeterministicIdentity(quotedValue);value
 String literal quotes are stripped;deterministicIdentity("hi");hi
-String literal quotes are stripped;deterministicIdentity(quotedValue);"value"
+String literal quotes are stripped;deterministicIdentity(quotedValue);value
 Custom function 1;increment(2);3
 Custom function 2;1 + increment(3);5
 Custom function 3;1 + increment(3 + 6);11

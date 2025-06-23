@@ -16,36 +16,62 @@ package net.rptools.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
 import java.util.List;
 import net.rptools.parser.function.AbstractFunction;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvFileSource;
 
 public class EvaluationTest {
-  @Test
-  public void testAssignToTrue() throws ParserException {
-    Parser p = new Parser();
-    try {
-      evaluateExpression(p, "true = 2", BigDecimal.valueOf(2));
-      fail("Was able to assign to 'true'");
-    } catch (ParserException ex) {
-      // Expected
-    }
+  private Parser parser;
+  private MapVariableResolver resolver;
+
+  @BeforeEach
+  public void setUp() throws ParserException {
+    parser = new Parser();
+    parser.addFunction(new NonDeterministicIdentityFunction());
+    parser.addFunction(new DeterministicIdentityFunction());
+    parser.addFunction(new IncrementFunction());
+
+    resolver = new MapVariableResolver();
+    resolver.setVariable("ii", new BigDecimal(100));
+    resolver.setVariable("C_mpl.x", new BigDecimal(42));
+    resolver.setVariable("foo", VariableModifiers.Prompt, new BigDecimal(10));
+    resolver.setVariable("quotedValue", "\"value\"");
+    resolver.setVariable("x", List.of("one", "two"));
   }
 
   @Test
-  public void testAssignToFalse() throws ParserException {
-    Parser p = new Parser();
-    try {
-      evaluateExpression(p, "false = 2", BigDecimal.valueOf(2));
-      fail("Was able to assign to 'fakse'");
-    } catch (ParserException ex) {
-      // Expected
-    }
+  public void testAssignToTrue() {
+    assertThrows(
+        ParserException.class,
+        () -> evaluateExpression(parser, resolver, false, "true = 2", BigDecimal.valueOf(2)));
+  }
+
+  @Test
+  public void testAssignToFalse() {
+    assertThrows(
+        ParserException.class,
+        () -> evaluateExpression(parser, resolver, false, "false = 2", BigDecimal.valueOf(2)));
+  }
+
+  @Test
+  public void testAssignment() throws ParserException {
+    evaluateExpression(parser, resolver, false, "a = 5", new BigDecimal(5));
+    assertEquals(new BigDecimal(5), resolver.getVariable("a"));
+
+    evaluateExpression(parser, resolver, false, "b = a * 2", new BigDecimal(10));
+    assertEquals(new BigDecimal(10), resolver.getVariable("b"));
+
+    evaluateExpression(parser, resolver, false, "b = b * b", new BigDecimal(100));
+    assertEquals(new BigDecimal(100), resolver.getVariable("b"));
+
+    evaluateExpression(parser, resolver, false, "10 * set(\"c\", 10)", new BigDecimal(100));
+    assertEquals(new BigDecimal(10), resolver.getVariable("c"));
   }
 
   @ParameterizedTest(name = "{0}; {1}; {2}")
@@ -66,108 +92,40 @@ public class EvaluationTest {
       }
     }
 
-    Parser p = new Parser(true);
-    VariableResolver resolver = new MapVariableResolver();
-
-    evaluateExpression(p, resolver, input, expectedValue);
+    evaluateExpression(parser, resolver, false, input, expectedValue);
   }
 
-  @Test
-  public void testAssignment() throws ParserException {
-    Parser p = new Parser();
-    VariableResolver r = new MapVariableResolver();
+  @ParameterizedTest(name = "{0}; {1}; {2}")
+  @CsvFileSource(
+      resources = "EvaluationTest.testSuccessfulDeterministicEvaluations.csv",
+      numLinesToSkip = 1,
+      delimiter = ';',
+      quoteCharacter = '`',
+      ignoreLeadingAndTrailingWhitespace = false)
+  public void testSuccessfulDeterministicEvaluations(
+      String label, String input, Object expectedValue) throws ParserException {
+    // Cast expectation to BigDecimal
+    if (expectedValue instanceof String s) {
+      try {
+        expectedValue = new BigDecimal(s);
+      } catch (NumberFormatException e) {
+        // Ignore. It's just not a number, okay?
+      }
+    }
 
-    evaluateExpression(p, r, "a = 5", new BigDecimal(5));
-    assertEquals(r.getVariable("a"), new BigDecimal(5));
-
-    evaluateExpression(p, r, "b = a * 2", new BigDecimal(10));
-    assertEquals(r.getVariable("b"), new BigDecimal(10));
-
-    evaluateExpression(p, r, "b = b * b", new BigDecimal(100));
-    assertEquals(r.getVariable("b"), new BigDecimal(100));
-
-    evaluateExpression(p, r, "10 * set(\"c\", 10)", new BigDecimal(100));
-    assertEquals(r.getVariable("c"), new BigDecimal(10));
+    evaluateExpression(parser, resolver, true, input, expectedValue);
   }
 
-  @Test
-  public void testEvaluateVariables() throws ParserException {
-    Parser p = new Parser();
-    VariableResolver r = new MapVariableResolver();
-    r.setVariable("ii", new BigDecimal(100));
-
-    evaluateExpression(p, r, "ii", new BigDecimal(100));
-    evaluateExpression(p, r, "II", new BigDecimal(100));
-    evaluateExpression(p, r, "ii + 10", new BigDecimal(110));
-    evaluateExpression(p, r, "ii * 2", new BigDecimal(200));
-
-    r.setVariable("C_mpl.x", new BigDecimal(42));
-
-    evaluateExpression(p, r, "C_mpl.x * 10", new BigDecimal(420));
-
-    r.setVariable("foo", VariableModifiers.Prompt, new BigDecimal(10));
-
-    evaluateExpression(p, r, "?foo + 2", new BigDecimal(12));
-  }
-
-  @Test
-  public void testEvaluateCustomFunction() throws ParserException {
-    Parser p = new Parser();
-    p.addFunction(
-        new AbstractFunction(1, 1, "increment") {
-
-          @Override
-          public Object childEvaluate(
-              Parser parser,
-              VariableResolver resolver,
-              String functionName,
-              List<Object> parameters) {
-            BigDecimal value = (BigDecimal) parameters.get(0);
-            return value.add(BigDecimal.ONE);
-          }
-        });
-
-    evaluateExpression(p, "increment(2)", new BigDecimal(3));
-    evaluateExpression(p, "1 + increment(3)", new BigDecimal(5));
-    evaluateExpression(p, "1 + increment(3 + 6)", new BigDecimal(11));
-    evaluateExpression(p, "2 + increment(2 * 2) * 5", new BigDecimal(27));
-  }
-
-  @Test
-  public void testIncompatibleArgumentOperations() throws ParserException {
-
-    VariableResolver resolver = new MapVariableResolver();
-    Parser p = new Parser(true);
-
-    // string + object
-    resolver.setVariable("x", List.of("one", "two"));
-    evaluateStringExpression(p, resolver, "\"text\" + x", "text[one, two]");
-
-    // num + object
-    evaluateStringExpression(p, resolver, "1 + x", "1[one, two]");
-
-    // string equals (case ignore) object
-    evaluateExpression(p, resolver, "'[one, two]' == x", BigDecimal.ONE);
-
-    // string equals (case ignore) object
-    evaluateExpression(p, resolver, "'[one, three]' != x", BigDecimal.ONE);
-
-    // string equals (strict) object
-    evaluateExpression(p, resolver, "eqs('[one, two]',x)", BigDecimal.ONE);
-
-    // string not equals (strict) object
-    evaluateExpression(p, resolver, "neqs('[one, TWO]',x)", BigDecimal.ONE);
-  }
-
-  private void evaluateExpression(Parser p, String expression, Object answer)
-      throws ParserException {
-    evaluateExpression(p, new MapVariableResolver(), expression, answer);
-  }
-
-  private void evaluateExpression(Parser p, VariableResolver r, String expression, Object answer)
+  private void evaluateExpression(
+      Parser p, VariableResolver r, boolean makeDeterministic, String expression, Object answer)
       throws ParserException {
 
-    Object result = p.parseExpression(expression).evaluate(r);
+    var ast = p.parseExpression(expression);
+    if (makeDeterministic) {
+      ast = ast.getDeterministicExpression(resolver);
+    }
+
+    Object result = ast.evaluate(r);
 
     if (answer instanceof BigDecimal bd) {
       assertInstanceOf(BigDecimal.class, result, "%s is also a BigDecimal");
@@ -185,11 +143,40 @@ public class EvaluationTest {
     }
   }
 
-  private void evaluateStringExpression(
-      Parser p, VariableResolver resolver, String expression, String answer)
-      throws ParserException {
-    String result = (String) p.parseExpression(expression).evaluate(resolver);
+  private static class DeterministicIdentityFunction extends AbstractFunction {
+    public DeterministicIdentityFunction() {
+      super(1, 1, true, "deterministicIdentity");
+    }
 
-    assertEquals(answer, result);
+    @Override
+    public Object childEvaluate(
+        Parser parser, VariableResolver resolver, String functionName, List<Object> parameters) {
+      return parameters.get(0);
+    }
+  }
+
+  private static class NonDeterministicIdentityFunction extends AbstractFunction {
+    public NonDeterministicIdentityFunction() {
+      super(1, 1, false, "nondeterministicIdentity");
+    }
+
+    @Override
+    public Object childEvaluate(
+        Parser parser, VariableResolver resolver, String functionName, List<Object> parameters) {
+      return parameters.get(0);
+    }
+  }
+
+  private static class IncrementFunction extends AbstractFunction {
+    public IncrementFunction() {
+      super(1, 1, "increment");
+    }
+
+    @Override
+    public Object childEvaluate(
+        Parser parser, VariableResolver resolver, String functionName, List<Object> parameters) {
+      BigDecimal value = (BigDecimal) parameters.get(0);
+      return value.add(BigDecimal.ONE);
+    }
   }
 }
