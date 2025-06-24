@@ -44,7 +44,18 @@ public class EvaluationTreeParser {
         yield resolver.getVariable(promptVariable.variable(), VariableModifiers.Prompt);
       }
       case AST.NumberLiteral numberLiteral -> numberLiteral.value();
-      case AST.StringLiteral stringLiteral -> stringLiteral.value();
+      case AST.StringLiteral stringLiteral -> {
+        // Strip off the quotes from the string
+        var str = stringLiteral.value();
+        if (str.length() >= 2) {
+          char first = str.charAt(0);
+          char last = str.charAt(str.length() - 1);
+          if (first == last && (first == '\'' || first == '"')) {
+            str = str.substring(1, str.length() - 1);
+          }
+        }
+        yield str;
+      }
       case AST.Unary unary -> {
         var child = evaluate(unary.operand(), resolver);
 
